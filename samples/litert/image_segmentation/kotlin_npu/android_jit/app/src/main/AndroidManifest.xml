@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.google.ai.edge.examples.image_segmentation"
           xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Declare permissions -->
@@ -30,6 +29,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ImageSegmentation"
         tools:targetApi="33">
+        <uses-native-library
+            android:name="libLiteRtCompilerPlugin_IntelOpenvino.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libLiteRtDispatch_IntelOpenvino.so"
+            android:required="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

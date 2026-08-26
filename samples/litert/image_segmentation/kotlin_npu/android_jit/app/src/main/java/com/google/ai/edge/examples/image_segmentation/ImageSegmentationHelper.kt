@@ -61,17 +61,22 @@ class ImageSegmentationHelper(private val context: Context) {
   private val singleThreadDispatcher = Dispatchers.IO.limitedParallelism(1, "ModelDispatcher")
 
   /** Init a CompiledModel from AI Pack. */
-  suspend fun initSegmenter(acceleratorEnum: AcceleratorEnum = AcceleratorEnum.CPU) {
+  suspend fun initSegmenter(acceleratorEnum: AcceleratorEnum = AcceleratorEnum.NPU) {
     cleanup()
     try {
       val accelerator = toAccelerator(acceleratorEnum)
-      val env = Environment.create(BuiltinNpuAcceleratorProvider(context))
-
-      val options = CompiledModel.Options(accelerator).apply {
-        qualcommOptions = CompiledModel.QualcommOptions(
-          htpPerformanceMode = CompiledModel.QualcommOptions.HtpPerformanceMode.HIGH_PERFORMANCE
+      val nativeLibraryDir = "/vendor/lib64"
+      val env =
+        Environment.create(
+          BuiltinNpuAcceleratorProvider(context),
+          mapOf(
+            Environment.Option.DispatchLibraryDir to nativeLibraryDir,
+            Environment.Option.CompilerPluginLibraryDir to nativeLibraryDir,
+          ),
         )
-      }
+      Log.i(TAG, "LiteRT native library directory: $nativeLibraryDir")
+
+      val options = CompiledModel.Options(accelerator)
       withContext(singleThreadDispatcher) {
         val model =
             CompiledModel.create(
@@ -322,8 +327,8 @@ class ImageSegmentationHelper(private val context: Context) {
   data class ColoredLabel(val label: String, val displayName: String, val argb: Int)
 
   enum class AcceleratorEnum {
-    CPU,
     NPU,
+    CPU,
     GPU,
   }
 

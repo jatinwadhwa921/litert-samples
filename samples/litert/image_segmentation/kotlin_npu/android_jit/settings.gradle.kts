@@ -40,21 +40,22 @@ rootProject.name = "Image Segmentation"
 
 include(":app")
 
-// NPU runtime libraries
-include(":litert_npu_runtime_libraries:runtime_strings")
+val optionalNpuRuntimeProjects =
+  listOf(
+    ":litert_npu_runtime_libraries:runtime_strings",
+    ":litert_npu_runtime_libraries:mediatek_runtime",
+    ":litert_npu_runtime_libraries:google_tensor_runtime",
+    ":litert_npu_runtime_libraries:samsung_runtime",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v69",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v73",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v75",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v79",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v81",
+  )
 
-include(":litert_npu_runtime_libraries:mediatek_runtime")
-
-include(":litert_npu_runtime_libraries:google_tensor_runtime")
-
-include(":litert_npu_runtime_libraries:samsung_runtime")
-
-include(":litert_npu_runtime_libraries:qualcomm_runtime_v69")
-
-include(":litert_npu_runtime_libraries:qualcomm_runtime_v73")
-
-include(":litert_npu_runtime_libraries:qualcomm_runtime_v75")
-
-include(":litert_npu_runtime_libraries:qualcomm_runtime_v79")
-
-include(":litert_npu_runtime_libraries:qualcomm_runtime_v81")
+optionalNpuRuntimeProjects.forEach { projectPath ->
+  val projectDirectory = file(projectPath.removePrefix(":").replace(':', '/'))
+  if (projectDirectory.isDirectory) {
+    include(projectPath)
+  }
+}

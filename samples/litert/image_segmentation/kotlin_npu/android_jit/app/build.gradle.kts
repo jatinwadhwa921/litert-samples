@@ -21,6 +21,18 @@ plugins {
   alias(libs.plugins.compose.compiler)
 }
 
+val optionalNpuRuntimeFeatures =
+  listOf(
+    ":litert_npu_runtime_libraries:mediatek_runtime",
+    ":litert_npu_runtime_libraries:google_tensor_runtime",
+    ":litert_npu_runtime_libraries:samsung_runtime",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v69",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v73",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v75",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v79",
+    ":litert_npu_runtime_libraries:qualcomm_runtime_v81",
+  )
+
 android {
   namespace = "com.google.ai.edge.examples.image_segmentation"
   compileSdk = 36
@@ -35,8 +47,8 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     vectorDrawables { useSupportLibrary = true }
 
-    // NPU only supports arm64-v8a
-    ndk { abiFilters.add("arm64-v8a") }
+    // Run natively on the Intel Android system.
+    ndk { abiFilters.add("x86_64") }
     // Needed for Qualcomm NPU runtimes
     packaging { jniLibs { useLegacyPackaging = true } }
   }
@@ -54,15 +66,7 @@ android {
   buildFeatures { compose = true }
   packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 
-  // NPU runtime libraries
-  dynamicFeatures.add(":litert_npu_runtime_libraries:mediatek_runtime")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:google_tensor_runtime")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:samsung_runtime")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:qualcomm_runtime_v69")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:qualcomm_runtime_v73")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:qualcomm_runtime_v75")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:qualcomm_runtime_v79")
-  dynamicFeatures.add(":litert_npu_runtime_libraries:qualcomm_runtime_v81")
+  dynamicFeatures.addAll(optionalNpuRuntimeFeatures.filter { findProject(it) != null })
 
   bundle {
     deviceTargetingConfig = file("device_targeting_configuration.xml")
@@ -85,8 +89,7 @@ project.extensions.extraProperties["ASSET_DIR"] = "$projectDir/src/main/assets"
 apply(from = "download_model.gradle")
 
 dependencies {
-  // Strings for NPU runtime libraries
-  implementation(project(":litert_npu_runtime_libraries:runtime_strings"))
+  findProject(":litert_npu_runtime_libraries:runtime_strings")?.let { implementation(it) }
 
   implementation(libs.litert)
 
