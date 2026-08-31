@@ -47,8 +47,7 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     vectorDrawables { useSupportLibrary = true }
 
-    // Run natively on the Intel Android system.
-    ndk { abiFilters.add("x86_64") }
+    ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
     // Needed for Qualcomm NPU runtimes
     packaging { jniLibs { useLegacyPackaging = true } }
   }

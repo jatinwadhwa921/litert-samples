@@ -20,6 +20,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Matrix
+import android.os.Build
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.graphics.scale
@@ -28,6 +29,7 @@ import com.google.ai.edge.litert.Accelerator
 import com.google.ai.edge.litert.BuiltinNpuAcceleratorProvider
 import com.google.ai.edge.litert.CompiledModel
 import com.google.ai.edge.litert.Environment
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import java.util.Random
@@ -61,22 +63,30 @@ class ImageSegmentationHelper(private val context: Context) {
   private val singleThreadDispatcher = Dispatchers.IO.limitedParallelism(1, "ModelDispatcher")
 
   /** Init a CompiledModel from AI Pack. */
-  suspend fun initSegmenter(acceleratorEnum: AcceleratorEnum = AcceleratorEnum.NPU) {
+  suspend fun initSegmenter(acceleratorEnum: AcceleratorEnum = AcceleratorEnum.CPU) {
     cleanup()
     try {
       val accelerator = toAccelerator(acceleratorEnum)
-      val nativeLibraryDir = "/vendor/lib64"
+      val environmentOptions = systemNpuEnvironmentOptions()
       val env =
         Environment.create(
           BuiltinNpuAcceleratorProvider(context),
-          mapOf(
-            Environment.Option.DispatchLibraryDir to nativeLibraryDir,
-            Environment.Option.CompilerPluginLibraryDir to nativeLibraryDir,
-          ),
+          environmentOptions,
         )
-      Log.i(TAG, "LiteRT native library directory: $nativeLibraryDir")
+      if (environmentOptions.isNotEmpty()) {
+        Log.i(TAG, "LiteRT system NPU libraries: $SYSTEM_NPU_LIBRARY_DIR")
+      }
 
-      val options = CompiledModel.Options(accelerator)
+      val options =
+        CompiledModel.Options(accelerator).apply {
+          if (accelerator == Accelerator.NPU && isQualcommDevice()) {
+            qualcommOptions =
+              CompiledModel.QualcommOptions(
+                htpPerformanceMode =
+                  CompiledModel.QualcommOptions.HtpPerformanceMode.HIGH_PERFORMANCE
+              )
+          }
+        }
       withContext(singleThreadDispatcher) {
         val model =
             CompiledModel.create(
@@ -327,8 +337,8 @@ class ImageSegmentationHelper(private val context: Context) {
   data class ColoredLabel(val label: String, val displayName: String, val argb: Int)
 
   enum class AcceleratorEnum {
-    NPU,
     CPU,
+    NPU,
     GPU,
   }
 
@@ -343,6 +353,31 @@ class ImageSegmentationHelper(private val context: Context) {
 
   private companion object {
     const val TAG = "ImageSegmentation"
+    const val SYSTEM_NPU_LIBRARY_DIR = "/vendor/lib64"
+
+    val SYSTEM_NPU_ENTRY_POINTS =
+      listOf(
+        "libLiteRtCompilerPlugin_IntelOpenvino.so",
+        "libLiteRtDispatch_IntelOpenvino.so",
+      )
+
+    fun systemNpuEnvironmentOptions(): Map<Environment.Option, String> {
+      val hasSystemNpuLibraries =
+        SYSTEM_NPU_ENTRY_POINTS.all { File(SYSTEM_NPU_LIBRARY_DIR, it).isFile }
+      if (!hasSystemNpuLibraries) return emptyMap()
+
+      return mapOf(
+        Environment.Option.DispatchLibraryDir to SYSTEM_NPU_LIBRARY_DIR,
+        Environment.Option.CompilerPluginLibraryDir to SYSTEM_NPU_LIBRARY_DIR,
+      )
+    }
+
+    fun isQualcommDevice(): Boolean {
+      return listOfNotNull(Build.SOC_MANUFACTURER, Build.MANUFACTURER, Build.HARDWARE).any {
+        val value = it.lowercase()
+        value.contains("qualcomm") || value.contains("qcom")
+      }
+    }
 
     fun toAccelerator(acceleratorEnum: AcceleratorEnum): Accelerator {
       return when (acceleratorEnum) {
