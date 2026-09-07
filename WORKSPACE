@@ -5,17 +5,19 @@ workspace(name = "litert")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 
-# LiteRT Archive pointing to the latest commit on main branch
+# LiteRT release matching the Android runtime.
 http_archive(
     name = "litert_archive",
-    url = "https://github.com/google-ai-edge/LiteRT/archive/refs/heads/main.tar.gz",
-    strip_prefix = "LiteRT-main",
+    patches = ["//:PATCH.litert_openvino_buffer_debug"],
+    patch_args = ["-p1"],
+    sha256 = "6d2ce16738199adc5a3cdde76c3c6a6dac636d3b52a1d7790ea524fb0d59f7fc",
+    strip_prefix = "LiteRT-2.2.0",
+    url = "https://github.com/google-ai-edge/LiteRT/archive/refs/tags/v2.2.0.tar.gz",
     patch_cmds = [
         "sed 's|//litert|@litert_archive//litert|g' litert/build_common/special_rule.bzl > litert/build_common/special_rule.bzl.tmp && mv litert/build_common/special_rule.bzl.tmp litert/build_common/special_rule.bzl",
         "sed 's|@//third_party|@litert_archive//third_party|g' third_party/litert_prebuilts/workspace.bzl > third_party/litert_prebuilts/workspace.bzl.tmp && mv third_party/litert_prebuilts/workspace.bzl.tmp third_party/litert_prebuilts/workspace.bzl",
-        # Make litert/cc and litert/cc/options targets publicly visible to external workspaces.
+        # Make litert/cc targets publicly visible to external workspaces.
         "sed 's|//litert:__subpackages__|//visibility:public|g' litert/cc/BUILD > litert/cc/BUILD.tmp && mv litert/cc/BUILD.tmp litert/cc/BUILD",
-        "sed 's|//litert:__subpackages__|//visibility:public|g' litert/cc/options/BUILD > litert/cc/options/BUILD.tmp && mv litert/cc/options/BUILD.tmp litert/cc/options/BUILD",
         # Windows: inject windows_export_all_symbols feature into cc_shared_library for DLL builds.
         "sed 's/cc_shared_library(/cc_shared_library(\\n    features = [\"windows_export_all_symbols\"],/g' litert/c/BUILD > litert/c/BUILD.tmp && mv litert/c/BUILD.tmp litert/c/BUILD",
         # Windows: define the missing static constant kValueNotSet needed by MSVC linker.

@@ -48,8 +48,6 @@ android {
     vectorDrawables { useSupportLibrary = true }
 
     ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
-    // Needed for Qualcomm NPU runtimes
-    packaging { jniLibs { useLegacyPackaging = true } }
   }
 
   buildTypes {
@@ -63,7 +61,17 @@ android {
     targetCompatibility = JavaVersion.VERSION_1_8
   }
   buildFeatures { compose = true }
-  packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+  packaging {
+    jniLibs {
+      // Extract packaged NPU libraries so LiteRT can load them from nativeLibraryDir.
+      useLegacyPackaging = true
+      pickFirsts += setOf(
+        "**/libLiteRt.so",
+        "**/liblitert_jni.so",
+      )
+    }
+    resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+  }
 
   dynamicFeatures.addAll(optionalNpuRuntimeFeatures.filter { findProject(it) != null })
 

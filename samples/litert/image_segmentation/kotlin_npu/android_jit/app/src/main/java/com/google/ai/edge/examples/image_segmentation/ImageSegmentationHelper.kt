@@ -59,24 +59,14 @@ class ImageSegmentationHelper(private val context: Context) {
   private val coloredLabels: List<ColoredLabel> = coloredLabels()
 
   // Accessed only with singleThreadDispatcher.
+  private var environment: Environment? = null
   private var segmenter: Segmenter? = null
   private val singleThreadDispatcher = Dispatchers.IO.limitedParallelism(1, "ModelDispatcher")
 
   /** Init a CompiledModel from AI Pack. */
   suspend fun initSegmenter(acceleratorEnum: AcceleratorEnum = AcceleratorEnum.CPU) {
-    cleanup()
     try {
       val accelerator = toAccelerator(acceleratorEnum)
-      val environmentOptions = systemNpuEnvironmentOptions()
-      val env =
-        Environment.create(
-          BuiltinNpuAcceleratorProvider(context),
-          environmentOptions,
-        )
-      if (environmentOptions.isNotEmpty()) {
-        Log.i(TAG, "LiteRT system NPU libraries: $SYSTEM_NPU_LIBRARY_DIR")
-      }
-
       val options =
         CompiledModel.Options(accelerator).apply {
           if (accelerator == Accelerator.NPU && isQualcommDevice()) {
@@ -88,6 +78,8 @@ class ImageSegmentationHelper(private val context: Context) {
           }
         }
       withContext(singleThreadDispatcher) {
+        cleanupSegmenter()
+        val env = environment ?: createEnvironment().also { environment = it }
         val model =
             CompiledModel.create(
               context.assets,
@@ -108,13 +100,34 @@ class ImageSegmentationHelper(private val context: Context) {
   suspend fun cleanup() {
     try {
       withContext(singleThreadDispatcher) {
-        segmenter?.cleanup()
-        segmenter = null
-        Log.d(TAG, "Destroyed the image segmenter")
+        cleanupSegmenter()
+        environment?.close()
+        environment = null
+        Log.d(TAG, "Destroyed the LiteRT environment")
       }
     } catch (e: Exception) {
       Log.e(TAG, "Error during cleanup: ${e.message}")
     }
+  }
+
+  private fun cleanupSegmenter() {
+    segmenter?.cleanup()
+    segmenter = null
+    Log.d(TAG, "Destroyed the image segmenter")
+  }
+
+  private fun createEnvironment(): Environment {
+    val nativeLibraryDir = context.applicationInfo.nativeLibraryDir
+    val environmentOptions = bundledNpuEnvironmentOptions(nativeLibraryDir)
+    return Environment.create(
+        BuiltinNpuAcceleratorProvider(context),
+        environmentOptions,
+      )
+      .also {
+        if (environmentOptions.isNotEmpty()) {
+          Log.i(TAG, "LiteRT bundled Intel NPU libraries: $nativeLibraryDir")
+        }
+      }
   }
 
   suspend fun segment(bitmap: Bitmap, rotationDegrees: Int) {
@@ -353,22 +366,23 @@ class ImageSegmentationHelper(private val context: Context) {
 
   private companion object {
     const val TAG = "ImageSegmentation"
-    const val SYSTEM_NPU_LIBRARY_DIR = "/vendor/lib64"
 
-    val SYSTEM_NPU_ENTRY_POINTS =
+    val BUNDLED_INTEL_NPU_ENTRY_POINTS =
       listOf(
         "libLiteRtCompilerPlugin_IntelOpenvino.so",
         "libLiteRtDispatch_IntelOpenvino.so",
       )
 
-    fun systemNpuEnvironmentOptions(): Map<Environment.Option, String> {
-      val hasSystemNpuLibraries =
-        SYSTEM_NPU_ENTRY_POINTS.all { File(SYSTEM_NPU_LIBRARY_DIR, it).isFile }
-      if (!hasSystemNpuLibraries) return emptyMap()
+    fun bundledNpuEnvironmentOptions(
+      nativeLibraryDir: String
+    ): Map<Environment.Option, String> {
+      val hasBundledIntelNpuLibraries =
+        BUNDLED_INTEL_NPU_ENTRY_POINTS.all { File(nativeLibraryDir, it).isFile }
+      if (!hasBundledIntelNpuLibraries) return emptyMap()
 
       return mapOf(
-        Environment.Option.DispatchLibraryDir to SYSTEM_NPU_LIBRARY_DIR,
-        Environment.Option.CompilerPluginLibraryDir to SYSTEM_NPU_LIBRARY_DIR,
+        Environment.Option.DispatchLibraryDir to nativeLibraryDir,
+        Environment.Option.CompilerPluginLibraryDir to nativeLibraryDir,
       )
     }
 

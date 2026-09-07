@@ -53,7 +53,9 @@ class MainViewModel(private val imageSegmentationHelper: ImageSegmentationHelper
   }
 
   init {
-    viewModelScope.launch { imageSegmentationHelper.initSegmenter() }
+    viewModelScope.launch {
+      imageSegmentationHelper.initSegmenter(ImageSegmentationHelper.AcceleratorEnum.NPU)
+    }
   }
 
   private var segmentJob: Job? = null

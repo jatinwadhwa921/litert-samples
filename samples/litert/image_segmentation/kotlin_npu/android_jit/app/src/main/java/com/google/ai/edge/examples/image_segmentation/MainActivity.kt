@@ -233,6 +233,7 @@ class MainActivity : ComponentActivity() {
       OptionMenu(
         label = stringResource(id = R.string.accelerator),
         options = ImageSegmentationHelper.AcceleratorEnum.entries.map { it.name },
+        initialOption = ImageSegmentationHelper.AcceleratorEnum.NPU.name,
       ) {
         onDelegateSelected(ImageSegmentationHelper.AcceleratorEnum.valueOf(it))
       }
@@ -244,10 +245,11 @@ class MainActivity : ComponentActivity() {
     label: String,
     modifier: Modifier = Modifier,
     options: List<String>,
+    initialOption: String = options.first(),
     onOptionSelected: (option: String) -> Unit,
   ) {
     var expanded by remember { mutableStateOf(false) }
-    var option by remember { mutableStateOf(options.first()) }
+    var option by remember(initialOption) { mutableStateOf(initialOption) }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
       Text(modifier = Modifier.weight(0.5f), text = label, fontSize = 15.sp)
       Box {

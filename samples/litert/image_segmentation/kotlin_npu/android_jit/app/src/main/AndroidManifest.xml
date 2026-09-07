@@ -30,10 +30,10 @@
         android:theme="@style/Theme.ImageSegmentation"
         tools:targetApi="33">
         <uses-native-library
-            android:name="libLiteRtCompilerPlugin_IntelOpenvino.so"
+            android:name="libze_loader.so"
             android:required="false" />
         <uses-native-library
-            android:name="libLiteRtDispatch_IntelOpenvino.so"
+            android:name="libze_intel_npu.so"
             android:required="false" />
 
         <activity

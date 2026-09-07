@@ -2,6 +2,12 @@
 
 LiteRT NPU is available to all users: https://ai.google.dev/edge/litert/next/npu
 
+## Bundled Intel OpenVINO runtime
+
+To build the Intel LiteRT compiler/dispatch plugins against a custom OpenVINO
+SDK and package the resulting Android x86_64 libraries inside the APK, follow
+[CUSTOM_OPENVINO_BUILD.md](CUSTOM_OPENVINO_BUILD.md).
+
 ## Build the app bundle
 
 WARNING: Before building the app, please follow instructions above to setup NPU
