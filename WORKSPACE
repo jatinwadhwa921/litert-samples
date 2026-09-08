@@ -3,16 +3,14 @@
 workspace(name = "litert")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
-# LiteRT release matching the Android runtime.
-http_archive(
+# Track LiteRT main so the runtime, JNI, and Intel plugins can be built from
+# the same source revision.
+git_repository(
     name = "litert_archive",
-    patches = ["//:PATCH.litert_openvino_buffer_debug"],
-    patch_args = ["-p1"],
-    sha256 = "6d2ce16738199adc5a3cdde76c3c6a6dac636d3b52a1d7790ea524fb0d59f7fc",
-    strip_prefix = "LiteRT-2.2.0",
-    url = "https://github.com/google-ai-edge/LiteRT/archive/refs/tags/v2.2.0.tar.gz",
+    branch = "main",
+    remote = "https://github.com/google-ai-edge/LiteRT.git",
     patch_cmds = [
         "sed 's|//litert|@litert_archive//litert|g' litert/build_common/special_rule.bzl > litert/build_common/special_rule.bzl.tmp && mv litert/build_common/special_rule.bzl.tmp litert/build_common/special_rule.bzl",
         "sed 's|@//third_party|@litert_archive//third_party|g' third_party/litert_prebuilts/workspace.bzl > third_party/litert_prebuilts/workspace.bzl.tmp && mv third_party/litert_prebuilts/workspace.bzl.tmp third_party/litert_prebuilts/workspace.bzl",
@@ -42,8 +40,6 @@ http_archive(
     strip_prefix = "FP16-4dfe081cf6bcd15db339cf2680b9281b8451eeb3",
     url = "https://github.com/Maratyszcza/FP16/archive/4dfe081cf6bcd15db339cf2680b9281b8451eeb3.zip",
 )
-
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "XNNPACK",

@@ -14,8 +14,6 @@
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["PATCH.litert_openvino_buffer_debug"])
-
 # Pre-built LiteRT dispatch plugin for MediaTek APU (arm64-v8a).
 # Source: litert_npu_runtime_libraries/mediatek_runtime
 filegroup(

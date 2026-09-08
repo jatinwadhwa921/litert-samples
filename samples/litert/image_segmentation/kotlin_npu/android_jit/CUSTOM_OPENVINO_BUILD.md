@@ -9,7 +9,7 @@ libraries.
 LiteRT and OpenVINO are not normally merged into one library. The deployment
 contains these layers:
 
-1. LiteRT Kotlin/runtime AAR (`com.google.ai.edge.litert:litert:2.1.6` by default).
+1. LiteRT Kotlin/runtime AAR (`com.google.ai.edge.litert:litert:2.2.0`).
 2. `libLiteRtCompilerPlugin_IntelOpenvino.so`, built against one OpenVINO SDK.
 3. `libLiteRtDispatch_IntelOpenvino.so`, built against the same SDK.
 4. The matching Android OpenVINO runtime, TFLite frontend, Intel NPU plugin and
@@ -70,11 +70,6 @@ The two `--incompatible_enable_*_toolchain_resolution` flags re-enable modern
 Android NDK toolchain selection after this repository's `clang_local` config
 disables it. Without them, Bazel can incorrectly ask the Linux host toolchain
 for an Android `x86_64` entry and fail in `local_config_cc`.
-
-The root workspace also patches the downloaded LiteRT `main` archive so the
-Intel dispatch source includes `npu_hal_wrapper.h`. This fixes the upstream
-Android compile error where `NpuHalHooks`, `GetNpuHalHooks`, and priority
-helpers are used without their declarations being included.
 
 The exact Bazel output directory can vary for external repositories. Locate the
 outputs instead of hard-coding it:
@@ -156,38 +151,12 @@ system libraries such as `libc.so`, `libdl.so`, `liblog.so`, `libm.so`, and
 `libandroid.so` should not be copied. Custom OpenVINO, TBB, and related
 non-system dependencies must be packaged.
 
-## Optional: build the matching LiteRT AAR
+## LiteRT runtime packaging
 
-The app currently uses the released Maven LiteRT `2.1.6`. That is the least
-invasive option, but a plugin built from a different LiteRT revision can have
-an incompatible plugin ABI.
-
-For full version alignment, build the LiteRT Kotlin AARs from the same LiteRT
-source revision used for the Intel plugins:
-
-```bash
-bazel build -c opt \
-  --config=android_x86_64 \
-  --incompatible_enable_cc_toolchain_resolution \
-  --incompatible_enable_android_toolchain_resolution \
-  --android_ndk_min_sdk_version=24 \
-  --define=public_maven_build=true \
-  --define=litert_runtime_link_mode=dynamic \
-  @litert_archive//litert/kotlin:litert-api-aar \
-  @litert_archive//litert/kotlin:litert-aar
-```
-
-Do not combine a random LiteRT `main` plugin, Maven `2.1.6`, and an unrelated
-OpenVINO nightly for production. Use either:
-
-- LiteRT source/tag compatible with `2.1.6`, plugins built from that source, and
-  one matching OpenVINO package; or
-- AARs, plugins, and OpenVINO libraries all built from one validated source and
-  SDK combination.
-
-Switching this app from Maven to locally built AARs is a separate dependency
-change because local AAR files do not carry Maven POM transitive dependencies.
-Validate the generated AAR pair before replacing `implementation(libs.litert)`.
+Gradle obtains LiteRT `2.2.0` from Maven. Its AAR packages `libLiteRt.so` and
+`liblitert_jni.so`, so do not copy those two libraries into `app/src/main/jniLibs`.
+Only copy the Intel compiler/dispatch plugins and their matching OpenVINO
+non-system dependencies.
 
 ## Build and verify the Android app
 
